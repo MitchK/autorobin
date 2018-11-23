@@ -3,12 +3,32 @@
 
 [[projects]]
   branch = "master"
+  digest = "1:8fda70c57919d8b3eda9806c43d26ad27efd6049571b838f6351d4c4b9dd5767"
+  name = "github.com/ajstarks/svgo"
+  packages = ["."]
+  pruneopts = "UT"
+  revision = "6ce6a3bcf6cde6c5007887677ebd148ec30f42a4"
+
+[[projects]]
+  branch = "master"
   digest = "1:ad5322f728463591f07bdab64ed25e25700e7e8fd20b2f7558bc4ae9a9ca3bbc"
   name = "github.com/andrewstuart/go-robinhood"
   packages = ["."]
   pruneopts = "UT"
   revision = "896cf3c2d91182bfd103a37b864a21c0a82fa22b"
   source = "github.com/MitchK/go-robinhood"
+
+[[projects]]
+  branch = "master"
+  digest = "1:7a6377256f670508711c56c25556d639e673c0fa0f519c5a758fdcbfc8af9ac8"
+  name = "github.com/golang/freetype"
+  packages = [
+    ".",
+    "raster",
+    "truetype",
+  ]
+  pruneopts = "UT"
+  revision = "e2365dfdc4a05e4b8299a783240d4a7d5a65d4e4"
 
 [[projects]]
   digest = "1:bc38c7c481812e178d85160472e231c5e1c9a7f5845d67e23ee4e706933c10d8"
@@ -35,20 +55,24 @@
   version = "v1.0.0"
 
 [[projects]]
-  digest = "1:15a204bc73cf9a95e05f67e48c7f2001d5c7355b5998892d4e643c8dda4589f1"
-  name = "github.com/jinzhu/gorm"
-  packages = ["dialects/sqlite"]
-  pruneopts = "UT"
-  revision = "6ed508ec6a4ecb3531899a69cbc746ccf65a4166"
-  version = "v1.9.1"
-
-[[projects]]
-  digest = "1:4a49346ca45376a2bba679ca0e83bec949d780d4e927931317904bad482943ec"
-  name = "github.com/mattn/go-sqlite3"
+  digest = "1:db23aee6f0ff15fbcd0559d660f91d6b738baeeca46d953396b2fdcec93e1260"
+  name = "github.com/jung-kurt/gofpdf"
   packages = ["."]
   pruneopts = "UT"
-  revision = "c7c4067b79cc51e6dfdcef5c702e74b1e0fa7c75"
-  version = "v1.10.0"
+  revision = "14c1db30737a138f8d9797cffea58783892b2fae"
+  version = "v1.0.0"
+
+[[projects]]
+  branch = "master"
+  digest = "1:79d2dd4ecf0c5b24e0a372768fd523242098338ab4453b3422bfe6ef15627b88"
+  name = "github.com/llgcode/draw2d"
+  packages = [
+    ".",
+    "draw2dbase",
+    "draw2dimg",
+  ]
+  pruneopts = "UT"
+  revision = "f52c8a71aff06ab8df41843d33ab167b36c971cd"
 
 [[projects]]
   digest = "1:ab54eea8d482272009e9e4af07d4d9b5236c27b4d8c54a3f2c99d163be883eca"
@@ -78,6 +102,29 @@
   pruneopts = "UT"
   revision = "645ef00459ed84a119197bfb8d8205042c6df63d"
   version = "v0.8.0"
+
+[[projects]]
+  branch = "master"
+  digest = "1:47bcbdf2a60a0bdd142f07f60771078857310fd1ededeb03956add7c7f6bef33"
+  name = "golang.org/x/exp"
+  packages = ["rand"]
+  pruneopts = "UT"
+  revision = "a3060d491354240eda536d676ced8bb702018b7e"
+
+[[projects]]
+  branch = "master"
+  digest = "1:7813ed9fe0d41dbe34f220634c84910ebd621e61a0bd5afaefc57dc1dc3c6a4c"
+  name = "golang.org/x/image"
+  packages = [
+    "draw",
+    "font",
+    "math/f64",
+    "math/fixed",
+    "tiff",
+    "tiff/lzw",
+  ]
+  pruneopts = "UT"
+  revision = "cd38e8056d9b27bb2f265effa37fb0ea6b8a7f0f"
 
 [[projects]]
   branch = "master"
@@ -131,6 +178,48 @@
   version = "v0.3.0"
 
 [[projects]]
+  branch = "master"
+  digest = "1:e0e0091ec7e965b354e346e5c1268ca33ef0a043b7044ed717f3983d684ad468"
+  name = "gonum.org/v1/gonum"
+  packages = [
+    "blas",
+    "blas/blas64",
+    "blas/gonum",
+    "floats",
+    "internal/asm/c128",
+    "internal/asm/f32",
+    "internal/asm/f64",
+    "internal/math32",
+    "lapack",
+    "lapack/gonum",
+    "lapack/lapack64",
+    "mat",
+  ]
+  pruneopts = "UT"
+  revision = "e09dcee939f30c1287bb4cdf04dde9c670e22260"
+
+[[projects]]
+  branch = "master"
+  digest = "1:89365bb0ca5259f9c155ce419106ffdaf0cd138eb3814e588b5528aed1ace646"
+  name = "gonum.org/v1/plot"
+  packages = [
+    ".",
+    "palette",
+    "plotter",
+    "plotutil",
+    "tools/bezier",
+    "vg",
+    "vg/draw",
+    "vg/fonts",
+    "vg/vgeps",
+    "vg/vgimg",
+    "vg/vgpdf",
+    "vg/vgsvg",
+  ]
+  pruneopts = "UT"
+  revision = "59819fff2fb90906d88e6aef7f06349b08ef451f"
+
+[[projects]]
   digest = "1:08206298775e5b462e6c0333f4471b44e63f1a70e42952b6ede4ecc9572281eb"
   name = "google.golang.org/appengine"
   packages = [
@@ -160,8 +249,10 @@
   input-imports = [
     "github.com/andrewstuart/go-robinhood",
     "github.com/golang/mock/gomock",
-    "github.com/jinzhu/gorm/dialects/sqlite",
     "github.com/onsi/gomega",
+    "gonum.org/v1/plot",
+    "gonum.org/v1/plot/plotutil",
+    "gonum.org/v1/plot/vg",
   ]
   solver-name = "gps-cdcl"
   solver-version = 1

@@ -10,7 +10,7 @@ import (
 	"github.com/onsi/gomega"
 )
 
-func TestCreateOrders(t *testing.T) {
+func TestRebalance(t *testing.T) {
 	g := gomega.NewGomegaWithT(t)
 	mockCtrl := gomock.NewController(t)
 	defer mockCtrl.Finish()
@@ -22,18 +22,18 @@ func TestCreateOrders(t *testing.T) {
 	c := model.Asset{Symbol: "C"}
 	d := model.Asset{Symbol: "D"}
 	e := model.Asset{Symbol: "E"}
+	assets := []model.Asset{a, b, c, d, e}
 	availableCash := 130.0
 	desiredPortfolio := model.Portfolio{
-		Assets: []model.Asset{a, b, c, d},
 		Weights: model.Weights{
 			a: 0.25,
 			b: 0.25,
 			c: 0.25,
 			d: 0.25,
+			e: 0.0,
 		},
 	}
 	actualPortfolio := model.Portfolio{
-		Assets: []model.Asset{a, b, c, d, e},
 		Weights: model.Weights{
 			a: 0.00, // Stock A is missing
 			b: 0.25, // already desired
@@ -57,6 +57,33 @@ func TestCreateOrders(t *testing.T) {
 		},
 		TotalValue: 100.0,
 	}
+	positions := []model.Position{
+		model.Position{
+			Asset:       a,
+			AvgBuyPrice: 0.0,
+			Quantity:    actualPortfolio.Quantities[a],
+		},
+		model.Position{
+			Asset:       b,
+			AvgBuyPrice: 0.9,
+			Quantity:    actualPortfolio.Quantities[b],
+		},
+		model.Position{
+			Asset:       c,
+			AvgBuyPrice: 0.9,
+			Quantity:    actualPortfolio.Quantities[c],
+		},
+		model.Position{
+			Asset:       d,
+			AvgBuyPrice: 0.9,
+			Quantity:    actualPortfolio.Quantities[d],
+		},
+		model.Position{
+			Asset:       e,
+			AvgBuyPrice: 0.9,
+			Quantity:    actualPortfolio.Quantities[e],
+		},
+	}
 
 	// mock out function calls
 	mockBroker.EXPECT().GetAvailableCash().Return(availableCash, nil)
@@ -64,16 +91,21 @@ func TestCreateOrders(t *testing.T) {
 		gomock.Eq(a),
 		gomock.Eq(b),
 		gomock.Eq(c),
-		gomock.Eq(d)).Return(actualPortfolio, nil)
+		gomock.Eq(d),
+		gomock.Eq(e)).Return(actualPortfolio, nil)
+	mockBroker.EXPECT().GetPositions(
+		gomock.Eq(a),
+		gomock.Eq(b),
+		gomock.Eq(c),
+		gomock.Eq(d),
+		gomock.Eq(e)).Return(positions, nil)
 	autopilot, err := autopilot.NewAutopilot(mockBroker)
 	g.Expect(err).To(gomega.BeNil())
 
-	// When
-	orders, err := autopilot.CreateOrders(desiredPortfolio)
-
-	// Then
+	orders, err := autopilot.Rebalance(desiredPortfolio, true, -1, assets...)
 	g.Expect(err).To(gomega.BeNil())
 	g.Expect(orders).ToNot(gomega.BeNil())
+	g.Expect(orders).ToNot(gomega.BeEmpty())
 
 	orderVolume := 0.0
 	for _, order := range orders {

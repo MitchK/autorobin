@@ -1,7 +1,7 @@
 package autopilot
 
 import (
-	"fmt"
+	"math"
 
 	"github.com/MitchK/autorobin/lib/broker"
 	"github.com/MitchK/autorobin/lib/model"
@@ -24,63 +24,93 @@ func (autopilot *Autopilot) GetBroker() broker.Broker {
 	return autopilot.broker
 }
 
-// CreateOrders CreateOrders
-func (autopilot *Autopilot) CreateOrders(desiredPortfolio model.Portfolio) ([]model.Order, error) {
+// Rebalance Rebalance
+func (autopilot *Autopilot) Rebalance(desiredPortfolio model.Portfolio, partials bool, minReturn float64, assets ...model.Asset) ([]model.Order, error) {
 
 	// Get available cash
-	cash, err := autopilot.broker.GetAvailableCash()
+	availableCash, err := autopilot.broker.GetAvailableCash()
 	if err != nil {
 		return nil, err
 	}
-	fmt.Printf("available cash %v\n", cash)
 
 	// Get actual portfolio
-	actualPortfolio, err := autopilot.broker.GetPortfolio(desiredPortfolio.Assets...)
+	actualPortfolio, err := autopilot.broker.GetPortfolio(assets...)
+	if err != nil {
+		return nil, err
+	}
+
+	// Get open positions
+	positions, err := autopilot.broker.GetPositions(assets...)
 	if err != nil {
 		return nil, err
 	}
 
 	// Create orders from diff
 	weightsDiff := desiredPortfolio.Weights.Diff(actualPortfolio.Weights)
+	// fmt.Printf("desired portfolio weights: %+v\n", desiredPortfolio.Weights)
+	// fmt.Printf("diff: %+v\n", weightsDiff)
 
 	// Create orders from diffs
 	orders := []model.Order{}
-	buyVolume := 0.0
-	for _, asset := range actualPortfolio.Assets {
-		volume := actualPortfolio.TotalValue * weightsDiff[asset]
-		orderPrice := actualPortfolio.Prices[asset]
-		quantity := volume / orderPrice
-		var orderType model.OrderType
+	for i, asset := range assets {
 		var description string
-		if quantity >= 0 {
+		var orderType model.OrderType
+
+		// Get current market price
+		orderPrice := actualPortfolio.Prices[asset]
+		position := positions[i]
+
+		// determine how much we can use to buy new stocks
+		volume := actualPortfolio.TotalValue * weightsDiff[asset]
+		if volume >= availableCash {
+			volume = availableCash
+		}
+		if volume >= 0 {
 			description = "Purchase of missing stocks"
 			orderType = model.OrderTypeBuy
-			buyVolume += volume
+			availableCash -= volume
 		} else {
 			description = "Sale of excess stocks"
 			orderType = model.OrderTypeSell
-			quantity *= -1
+			volume *= -1
+
+			if minReturn > 0 {
+				ret := (orderPrice - position.AvgBuyPrice) / position.AvgBuyPrice
+				if ret < minReturn {
+					continue
+				}
+			}
+		}
+
+		maxQuantity := volume / orderPrice // max possible quantity we can buy
+		if !partials {
+			maxQuantity = math.Floor(maxQuantity)
+			if maxQuantity < 1 {
+				continue
+			}
 		}
 		orders = append(orders, model.Order{
 			Description: description,
 			Type:        orderType,
-			Quantity:    quantity,
+			Quantity:    maxQuantity,
 			Price:       orderPrice,
 			Asset:       asset,
 		})
 	}
 
-	// we cannot further use cash that we need for buying
-	cash -= buyVolume
-
 	// Do we still have cash left to allocate?
-	if cash > 0 {
-		fmt.Printf("allocating remaining cash %v\n", cash)
-		for _, asset := range desiredPortfolio.Assets {
-			volume := cash * desiredPortfolio.Weights[asset]
+	if availableCash > 0 {
+		for _, asset := range assets {
+			volume := availableCash * desiredPortfolio.Weights[asset]
 			orderPrice := actualPortfolio.Prices[asset]
 			quantity := volume / orderPrice
 			orderType := model.OrderTypeBuy
+			if !partials {
+				quantity = math.Floor(quantity)
+				if quantity < 1 {
+					continue
+				}
+			}
 			orders = append(orders, model.Order{
 				Description: "Allocation of unbound cash",
 				Type:        orderType,

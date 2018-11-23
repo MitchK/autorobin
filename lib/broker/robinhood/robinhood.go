@@ -10,15 +10,15 @@ import (
 	robinhood "github.com/andrewstuart/go-robinhood"
 )
 
-// Broker Broker
-type Broker struct {
+// robinhoodBroker robinhoodBroker
+type robinhoodBroker struct {
 	client *robinhood.Client
 }
 
 // NewBroker NewBroker
 func NewBroker(username string, password string) (broker.Broker, error) {
 	var err error
-	broker := &Broker{}
+	broker := &robinhoodBroker{}
 	broker.client, err = robinhood.Dial(&robinhood.OAuth{
 		Username: username,
 		Password: password,
@@ -30,7 +30,7 @@ func NewBroker(username string, password string) (broker.Broker, error) {
 	return broker, nil
 }
 
-func (broker *Broker) getAccount() (robinhood.Account, error) {
+func (broker *robinhoodBroker) getAccount() (robinhood.Account, error) {
 	accounts, err := broker.client.GetAccounts()
 	if err != nil {
 		return robinhood.Account{}, err
@@ -41,7 +41,7 @@ func (broker *Broker) getAccount() (robinhood.Account, error) {
 	return accounts[0], nil
 }
 
-func (broker *Broker) getPortfolio() (robinhood.Portfolio, error) {
+func (broker *robinhoodBroker) getPortfolio() (robinhood.Portfolio, error) {
 	portfolios, err := broker.client.GetPortfolios()
 	if err != nil {
 		return robinhood.Portfolio{}, err
@@ -53,7 +53,7 @@ func (broker *Broker) getPortfolio() (robinhood.Portfolio, error) {
 }
 
 // GetAvailableCash GetAvailableCash
-func (broker *Broker) GetAvailableCash() (float64, error) {
+func (broker *robinhoodBroker) GetAvailableCash() (float64, error) {
 	account, err := broker.getAccount()
 	if err != nil {
 		return 0, err
@@ -61,31 +61,32 @@ func (broker *Broker) GetAvailableCash() (float64, error) {
 	return account.MarginBalances.UnallocatedMarginCash, nil
 }
 
-func (broker *Broker) convertPosition(position robinhood.Position) (model.Position, error) {
+func (broker *robinhoodBroker) convertPosition(position robinhood.Position) (model.Position, error) {
 	instrument, err := broker.client.GetInstrument(position.Instrument)
 	if err != nil {
 		return model.Position{}, err
 	}
+
 	return model.Position{
 		AvgBuyPrice: position.AverageBuyPrice,
-		Quantity:    position.Quantity,
+		Quantity:    position.Quantity + position.SharesHeldForBuys - position.SharesHeldForSells,
 		Asset: model.Asset{
 			Symbol: instrument.Symbol,
 		},
 	}, nil
 }
 
-func (broker *Broker) convertQuote(quote robinhood.Quote) (model.Quote, error) {
+func (broker *robinhoodBroker) convertQuote(quote robinhood.Quote) (model.Quote, error) {
 	return model.Quote{
 		Asset: model.Asset{
 			Symbol: quote.Symbol,
 		},
-		LastTradePrice: quote.LastTradePrice,
+		Price: quote.PreviousClose,
 	}, nil
 }
 
 // GetQuotes GetQuotes
-func (broker *Broker) GetQuotes(assets ...model.Asset) ([]model.Quote, error) {
+func (broker *robinhoodBroker) GetQuotes(assets ...model.Asset) ([]model.Quote, error) {
 	symbols := []string{}
 	for _, asset := range assets {
 		symbols = append(symbols, asset.Symbol)
@@ -105,8 +106,8 @@ func (broker *Broker) GetQuotes(assets ...model.Asset) ([]model.Quote, error) {
 	return retQuotes, nil
 }
 
-// GetOpenPositions GetOpenPositions
-func (broker *Broker) GetOpenPositions() ([]model.Position, error) {
+// GetPositions GetPositions
+func (broker *robinhoodBroker) GetPositions(assets ...model.Asset) ([]model.Position, error) {
 	account, err := broker.getAccount()
 	if err != nil {
 		return nil, err
@@ -115,7 +116,7 @@ func (broker *Broker) GetOpenPositions() ([]model.Position, error) {
 	if err != nil {
 		return nil, err
 	}
-	openPositions := []model.Position{}
+	openPositionsMap := map[model.Asset]model.Position{}
 	for _, position := range positions {
 		// filter out positions that are closed (i.e. q = 0)
 		// as well as positions that were given to us for free (avgBuyPrice = 0)
@@ -124,31 +125,27 @@ func (broker *Broker) GetOpenPositions() ([]model.Position, error) {
 			if err != nil {
 				return nil, err
 			}
-			openPositions = append(openPositions, convertedPosition)
+			openPositionsMap[convertedPosition.Asset] = convertedPosition
 		}
+	}
+	openPositions := make([]model.Position, len(assets))
+	for i, asset := range assets {
+		openPositions[i] = openPositionsMap[asset]
 	}
 	return openPositions, nil
 }
 
 // GetPortfolio GetPortfolio
-func (broker *Broker) GetPortfolio(includeAssets ...model.Asset) (model.Portfolio, error) {
-	openPositions, err := broker.GetOpenPositions()
+func (broker *robinhoodBroker) GetPortfolio(assets ...model.Asset) (model.Portfolio, error) {
+	positions, err := broker.GetPositions(assets...)
 	if err != nil {
 		return model.Portfolio{}, err
 	}
 
 	// Get quantities, include "includeAssets"
 	quantities := model.Quantities{}
-	assets := []model.Asset{}
-	for _, openPosition := range openPositions {
-		quantities[openPosition.Asset] = openPosition.Quantity
-		assets = append(assets, openPosition.Asset)
-	}
-	for _, asset := range includeAssets { // merge with includeAssets
-		if _, ok := quantities[asset]; !ok {
-			quantities[asset] = 0.0
-			assets = append(assets, asset)
-		}
+	for _, position := range positions {
+		quantities[position.Asset] = position.Quantity
 	}
 
 	// Get quotes for every asset
@@ -158,7 +155,7 @@ func (broker *Broker) GetPortfolio(includeAssets ...model.Asset) (model.Portfoli
 	}
 	prices := model.Prices{}
 	for _, quote := range quotes {
-		prices[quote.Asset] = quote.LastTradePrice
+		prices[quote.Asset] = quote.Price
 	}
 
 	// Calculate total
@@ -178,13 +175,12 @@ func (broker *Broker) GetPortfolio(includeAssets ...model.Asset) (model.Portfoli
 		TotalValue: total,
 		Prices:     prices,
 		Quantities: quantities,
-		Assets:     assets,
 	}, nil
 }
 
 // Execute Execute
-func (broker *Broker) Execute(orders ...model.Order) error {
-
+func (broker *robinhoodBroker) Execute(orders ...model.Order) []error {
+	errors := []error{}
 	for _, order := range orders {
 		orderStr := fmt.Sprintf("order of %v x %s @ %v (%s)", order.Quantity, order.Asset.Symbol, order.Price, order.Description)
 		if order.Quantity < 1 {
@@ -194,7 +190,8 @@ func (broker *Broker) Execute(orders ...model.Order) error {
 		fmt.Println("executing", orderStr, "...")
 		instr, err := broker.client.GetInstrumentForSymbol(order.Asset.Symbol)
 		if err != nil {
-			return err
+			errors = append(errors, err)
+			continue
 		}
 
 		var orderSide robinhood.OrderSide
@@ -203,22 +200,24 @@ func (broker *Broker) Execute(orders ...model.Order) error {
 		} else if order.Type == model.OrderTypeSell {
 			orderSide = robinhood.Sell
 		} else {
-			return fmt.Errorf("invalid order type: %v", order.Type)
+			errors = append(errors, fmt.Errorf("invalid order type: %v", order.Type))
+			continue
 		}
 
-		orderSide = robinhood.Sell
-
-		orderOutput, err := broker.client.Order(instr, robinhood.OrderOpts{
+		orderOpts := robinhood.OrderOpts{
 			Side:     orderSide,
 			Type:     robinhood.Limit,
 			Price:    math.Round(order.Price*100) / 100, // round to nearest
 			Quantity: uint64(order.Quantity),
-		})
+		}
+		orderOutput, err := broker.client.Order(instr, orderOpts)
 		if err != nil {
-			return err
+			errors = append(errors, err)
+			continue
 		}
 		if orderOutput.State != "confirmed" && orderOutput.State != "unconfirmed" {
-			return fmt.Errorf("some issue with order, state: %s, reject reason: %s", orderOutput.State, orderOutput.RejectReason)
+			errors = append(errors, fmt.Errorf("some issue with order, state: %s, reject reason: %s", orderOutput.State, orderOutput.RejectReason))
+			continue
 		}
 	}
 	return nil

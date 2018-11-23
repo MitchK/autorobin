@@ -34,13 +34,13 @@ func (m *MockBroker) EXPECT() *MockBrokerMockRecorder {
 }
 
 // Execute mocks base method
-func (m *MockBroker) Execute(arg0 ...model.Order) error {
+func (m *MockBroker) Execute(arg0 ...model.Order) []error {
 	varargs := []interface{}{}
 	for _, a := range arg0 {
 		varargs = append(varargs, a)
 	}
 	ret := m.ctrl.Call(m, "Execute", varargs...)
-	ret0, _ := ret[0].(error)
+	ret0, _ := ret[0].([]error)
 	return ret0
 }
 
@@ -62,19 +62,6 @@ func (mr *MockBrokerMockRecorder) GetAvailableCash() *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetAvailableCash", reflect.TypeOf((*MockBroker)(nil).GetAvailableCash))
 }
 
-// GetOpenPositions mocks base method
-func (m *MockBroker) GetOpenPositions() ([]model.Position, error) {
-	ret := m.ctrl.Call(m, "GetOpenPositions")
-	ret0, _ := ret[0].([]model.Position)
-	ret1, _ := ret[1].(error)
-	return ret0, ret1
-}
-
-// GetOpenPositions indicates an expected call of GetOpenPositions
-func (mr *MockBrokerMockRecorder) GetOpenPositions() *gomock.Call {
-	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetOpenPositions", reflect.TypeOf((*MockBroker)(nil).GetOpenPositions))
-}
-
 // GetPortfolio mocks base method
 func (m *MockBroker) GetPortfolio(arg0 ...model.Asset) (model.Portfolio, error) {
 	varargs := []interface{}{}
@@ -90,6 +77,23 @@ func (m *MockBroker) GetPortfolio(arg0 ...model.Asset) (model.Portfolio, error) 
 // GetPortfolio indicates an expected call of GetPortfolio
 func (mr *MockBrokerMockRecorder) GetPortfolio(arg0 ...interface{}) *gomock.Call {
 	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetPortfolio", reflect.TypeOf((*MockBroker)(nil).GetPortfolio), arg0...)
+}
+
+// GetPositions mocks base method
+func (m *MockBroker) GetPositions(arg0 ...model.Asset) ([]model.Position, error) {
+	varargs := []interface{}{}
+	for _, a := range arg0 {
+		varargs = append(varargs, a)
+	}
+	ret := m.ctrl.Call(m, "GetPositions", varargs...)
+	ret0, _ := ret[0].([]model.Position)
+	ret1, _ := ret[1].(error)
+	return ret0, ret1
+}
+
+// GetPositions indicates an expected call of GetPositions
+func (mr *MockBrokerMockRecorder) GetPositions(arg0 ...interface{}) *gomock.Call {
+	return mr.mock.ctrl.RecordCallWithMethodType(mr.mock, "GetPositions", reflect.TypeOf((*MockBroker)(nil).GetPositions), arg0...)
 }
 
 // GetQuotes mocks base method

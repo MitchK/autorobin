@@ -2,6 +2,6 @@ package model
 
 // Quote Quote
 type Quote struct {
-	Asset          Asset
-	LastTradePrice float64
+	Asset Asset
+	Price float64
 }

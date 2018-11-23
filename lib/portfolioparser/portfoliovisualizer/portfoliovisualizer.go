@@ -24,16 +24,18 @@ func NewParser() portfolioparser.Parser {
 }
 
 // Parse Parse
-func (parser *parser) Parse(reader io.Reader, portfolio *model.Portfolio) error {
+func (parser *parser) Parse(reader io.Reader) (*model.Portfolio, []model.Asset, error) {
+	portfolio := &model.Portfolio{}
 	r := csv.NewReader(reader)
 	r.FieldsPerRecord = -1 // allow uneven fields
 
 	lines, err := r.ReadAll()
 	if err != nil {
-		return err
+		return nil, nil, err
 	}
 	portfolio.Weights = model.Weights{}
 
+	assets := []model.Asset{}
 	start := false
 	for i, line := range lines {
 		if line[0] == "Ticker" {
@@ -55,14 +57,14 @@ func (parser *parser) Parse(reader io.Reader, portfolio *model.Portfolio) error 
 			64,
 		)
 		if err != nil {
-			return fmt.Errorf("csv parser: error at line %v: %s", i+1, err)
+			return nil, nil, fmt.Errorf("csv parser: error at line %v: %s", i+1, err)
 		}
 		asset := model.Asset{
 			Symbol: strings.Trim(line[0], " "),
 		}
-		portfolio.Assets = append(portfolio.Assets, asset)
+		assets = append(assets, asset)
 		portfolio.Weights[asset] = percentage / 100.0
 	}
 
-	return nil
+	return portfolio, assets, nil
 }

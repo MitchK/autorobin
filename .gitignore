@@ -1,3 +1,4 @@
 .vscode
-**/autorobin
 csv
+inputs
+**/*.png

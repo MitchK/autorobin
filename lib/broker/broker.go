@@ -6,9 +6,9 @@ import "github.com/MitchK/autorobin/lib/model"
 
 // Broker Broker
 type Broker interface {
-	Execute(orders ...model.Order) error
+	Execute(orders ...model.Order) []error
 	GetAvailableCash() (float64, error)
-	GetOpenPositions() ([]model.Position, error)
-	GetPortfolio(includeAssets ...model.Asset) (model.Portfolio, error)
+	GetPositions(assets ...model.Asset) ([]model.Position, error)
+	GetPortfolio(assets ...model.Asset) (model.Portfolio, error)
 	GetQuotes(assets ...model.Asset) ([]model.Quote, error)
 }

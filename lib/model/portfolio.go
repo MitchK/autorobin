@@ -10,5 +10,4 @@ type Portfolio struct {
 	Quantities Quantities
 	Prices     Prices
 	TotalValue float64
-	Assets     []Asset
 }
