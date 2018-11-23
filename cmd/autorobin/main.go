@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	"github.com/MitchK/autorobin/lib/autopilot"
+	robinhoodBroker "github.com/MitchK/autorobin/lib/broker/robinhood"
 	"github.com/MitchK/autorobin/lib/portfolioparser/portfoliovisualizer"
 
 	"github.com/MitchK/autorobin/lib/broker/fake"
@@ -81,6 +82,52 @@ func getQuotes(filePath string, symbol string) ([]model.Quote, error) {
 }
 
 func main() {
+	csvFile, err := os.Open(os.Getenv("PV_CSV_FILE"))
+	if err != nil {
+		panic(err)
+	}
+	parser := portfoliovisualizer.NewParser()
+	desiredWeights, assets, err := parser.Parse(bufio.NewReader(csvFile)) // TODO, connect with PV profile
+	if err != nil {
+		panic(err)
+	}
+
+	backtest(desiredWeights, assets, true)
+
+}
+
+func run(desiredWeights model.Weights, assets []model.Asset) {
+	// Connect to Robinhood
+	broker, err := robinhoodBroker.NewBroker(os.Getenv("ROBINHOOD_USERNAME"), os.Getenv("ROBINHOOD_PASSWORD"))
+	if err != nil {
+		panic(err)
+	}
+	fmt.Println("connected to robinhood")
+
+	// Create autopilot
+	autopilot, err := autopilot.NewAutopilot(broker)
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
+
+	orders, err := autopilot.Rebalance(desiredWeights, false, -1, assets...)
+	if err != nil {
+		fmt.Println(err)
+		os.Exit(1)
+	}
+
+	errs := broker.Execute(orders...)
+	if len(errs) > 0 {
+		for _, err := range errs {
+			fmt.Println(err)
+			os.Exit(1)
+		}
+	}
+
+}
+
+func backtest(desiredWeights model.Weights, assets []model.Asset, rebalance bool) {
 	p, err := plot.New()
 	if err != nil {
 		panic(err)
@@ -91,7 +138,6 @@ func main() {
 	chartData := []interface{}{}
 	numAssets := len(csvfiles)
 	periods := 0
-	assets := make([]model.Asset, len(csvfiles))
 	data := make(map[model.Asset][]model.Quote, len(csvfiles))
 	for i, filePath := range csvfiles {
 		_, fileName := filepath.Split(filePath)
@@ -103,7 +149,6 @@ func main() {
 		if periods == 0 || len(quotes) < periods {
 			periods = len(quotes)
 		}
-		assets[i] = model.Asset{Symbol: symbol}
 		data[assets[i]] = quotes
 		chartData = append(chartData, symbol)
 		chartData = append(chartData, toXYs(quotes))
@@ -119,22 +164,6 @@ func main() {
 		}
 	}
 
-	// Read desired portfolio
-	// desiredPortfolio := model.Portfolio{
-	// 	Weights: model.Weights{
-	// 		model.Asset
-	// 	},
-	// }
-	csvFile, err := os.Open(os.Getenv("PV_CSV_FILE"))
-	if err != nil {
-		panic(err)
-	}
-	parser := portfoliovisualizer.NewParser()
-	desiredPortfolio, assets, err := parser.Parse(bufio.NewReader(csvFile)) // TODO, connect with PV profile
-	if err != nil {
-		panic(err)
-	}
-
 	// Run back testing
 	broker := fake.NewBroker(100000.0)
 	pilot, err := autopilot.NewAutopilot(broker)
@@ -144,7 +173,7 @@ func main() {
 
 	portfolioQuotes := make([]model.Quote, periods)
 	for period := 0; period < periods; period++ {
-		fmt.Printf("----------------- Period %v-----------------\n", period)
+		fmt.Printf("----------------- Period %v -----------------\n", period)
 		broker.SetQuotes(dataT[period]...)
 		fmt.Println(broker.GetQuotes(assets...))
 		cash, err := broker.GetAvailableCash()
@@ -155,35 +184,40 @@ func main() {
 		if err != nil {
 			panic(err)
 		}
-		fmt.Println("before: total value is", currentPortfolio.TotalValue+cash, "(assets:", currentPortfolio.TotalValue, ", cash:", cash, ")")
-		orders, err := pilot.Rebalance(*desiredPortfolio, false, -1, assets...)
-		if err != nil {
-			fmt.Println(err)
-			continue
-		}
-		if len(orders) == 0 {
-			fmt.Printf("%v: no orders created\n", period)
-			continue
-		}
-		errs := broker.Execute(orders...)
-		if len(errs) > 0 {
-			for _, err := range errs {
-				fmt.Printf("%v: %s\n", period, err)
-				panic(errs)
-			}
-		}
-		cash, err = broker.GetAvailableCash()
-		if err != nil {
-			panic(err)
-		}
-		currentPortfolio, err = broker.GetPortfolio(assets...)
-		if err != nil {
-			panic(err)
-		}
-		portfolioQuotes[period] = model.Quote{
+		fmt.Println("total value is", currentPortfolio.TotalValue+cash, "(assets:", currentPortfolio.TotalValue, ", cash:", cash, ")")
+		quote := model.Quote{
 			Price: currentPortfolio.TotalValue + cash,
 		}
-		fmt.Println("after: total value is", currentPortfolio.TotalValue+cash, "(assets:", currentPortfolio.TotalValue, ", cash:", cash, ")")
+		portfolioQuotes[period] = quote
+
+		if period == 0 || rebalance {
+			orders, err := pilot.Rebalance(desiredWeights, false, 0.06, assets...)
+			if err != nil {
+				fmt.Println(err)
+				continue
+			}
+			if len(orders) == 0 {
+				fmt.Println("no orders created")
+				continue
+			}
+			errs := broker.Execute(orders...)
+			if len(errs) > 0 {
+				for _, err := range errs {
+					fmt.Println(err)
+					panic(errs)
+				}
+			}
+			cash, err = broker.GetAvailableCash()
+			if err != nil {
+				panic(err)
+			}
+			currentPortfolio, err = broker.GetPortfolio(assets...)
+			if err != nil {
+				panic(err)
+			}
+			fmt.Println("after rebalancing: total value is", currentPortfolio.TotalValue+cash, "(assets:", currentPortfolio.TotalValue, ", cash:", cash, ")")
+		}
+
 		fmt.Println("-----------------------------------------")
 	}
 
@@ -202,19 +236,4 @@ func main() {
 	if err := p.Save(40*vg.Centimeter, 20*vg.Centimeter, "points.png"); err != nil {
 		panic(err)
 	}
-
-	// // Connect to Robinhood
-	// broker, err := broker_robinhood.NewBroker(os.Getenv("ROBINHOOD_USERNAME"), os.Getenv("ROBINHOOD_PASSWORD"))
-	// if err != nil {
-	// 	panic(err)
-	// }
-	// fmt.Println("connected to robinhood")
-
-	// // Create autopilot
-	// autopilot, err := autopilot.NewAutopilot(broker)
-	// if err != nil {
-	// 	panic(err)
-	// }
-
-	// orders, err := autopilot.CreateOrders(desiredPortfolio)
 }

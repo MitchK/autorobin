@@ -54,14 +54,21 @@ func TestGetQuotes(t *testing.T) {
 
 	broker := newBroker(t)
 
+	// should correctly get quotes
 	quotes, err := broker.GetQuotes(assets...)
 	g.Expect(err).To(gomega.BeNil())
 	g.Expect(len(quotes)).To(gomega.Equal(4))
-
 	for i, asset := range assets {
 		g.Expect(quotes[i].Asset).To(gomega.Equal(asset))
 		g.Expect(quotes[i].Price).To(gomega.BeNumerically(">", 0))
 	}
+
+	// should throw error if asset was not found
+	broker = newBroker(t)
+	_, err = broker.GetQuotes(model.Asset{
+		Symbol: "N/A",
+	})
+	g.Expect(err).ToNot(gomega.BeNil())
 }
 
 func TestBuySell(t *testing.T) {

@@ -24,14 +24,12 @@ func TestRebalance(t *testing.T) {
 	e := model.Asset{Symbol: "E"}
 	assets := []model.Asset{a, b, c, d, e}
 	availableCash := 130.0
-	desiredPortfolio := model.Portfolio{
-		Weights: model.Weights{
-			a: 0.25,
-			b: 0.25,
-			c: 0.25,
-			d: 0.25,
-			e: 0.0,
-		},
+	desiredWeights := model.Weights{
+		a: 0.25,
+		b: 0.25,
+		c: 0.25,
+		d: 0.25,
+		e: 0.0,
 	}
 	actualPortfolio := model.Portfolio{
 		Weights: model.Weights{
@@ -102,7 +100,7 @@ func TestRebalance(t *testing.T) {
 	autopilot, err := autopilot.NewAutopilot(mockBroker)
 	g.Expect(err).To(gomega.BeNil())
 
-	orders, err := autopilot.Rebalance(desiredPortfolio, true, -1, assets...)
+	orders, err := autopilot.Rebalance(desiredWeights, true, -1, assets...)
 	g.Expect(err).To(gomega.BeNil())
 	g.Expect(orders).ToNot(gomega.BeNil())
 	g.Expect(orders).ToNot(gomega.BeEmpty())

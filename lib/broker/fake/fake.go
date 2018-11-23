@@ -33,7 +33,9 @@ func (fake *Fake) SetQuotes(quotes ...model.Quote) {
 
 // Execute Execute
 func (fake *Fake) Execute(orders ...model.Order) []error {
+
 	errs := []error{}
+
 	for _, order := range orders {
 		if order.Type == model.OrderTypeBuy {
 			fmt.Printf("BUY %v x %s @ %v (%s)\n", order.Quantity, order.Asset.Symbol, order.Price, order.Description)
@@ -167,10 +169,13 @@ func (fake *Fake) GetPortfolio(assets ...model.Asset) (model.Portfolio, error) {
 
 // GetQuotes GetQuotes
 func (fake *Fake) GetQuotes(assets ...model.Asset) ([]model.Quote, error) {
-	quotes := []model.Quote{}
-	for _, asset := range assets {
-		quote := fake.quotes[asset]
-		quotes = append(quotes, quote)
+	quotes := make([]model.Quote, len(assets))
+	for i, asset := range assets {
+		quote, exists := fake.quotes[asset]
+		if !exists {
+			return nil, fmt.Errorf("could not get quote, asset %s does not exist", asset)
+		}
+		quotes[i] = quote
 	}
 	return quotes, nil
 }

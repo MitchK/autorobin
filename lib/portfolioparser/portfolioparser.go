@@ -8,5 +8,5 @@ import (
 
 // Parser Parser
 type Parser interface {
-	Parse(reader io.Reader) (*model.Portfolio, []model.Asset, error)
+	Parse(reader io.Reader) (model.Weights, []model.Asset, error)
 }

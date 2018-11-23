@@ -25,7 +25,7 @@ func (autopilot *Autopilot) GetBroker() broker.Broker {
 }
 
 // Rebalance Rebalance
-func (autopilot *Autopilot) Rebalance(desiredPortfolio model.Portfolio, partials bool, minReturn float64, assets ...model.Asset) ([]model.Order, error) {
+func (autopilot *Autopilot) Rebalance(desiredWeights model.Weights, partials bool, minReturn float64, assets ...model.Asset) ([]model.Order, error) {
 
 	// Get available cash
 	availableCash, err := autopilot.broker.GetAvailableCash()
@@ -46,8 +46,9 @@ func (autopilot *Autopilot) Rebalance(desiredPortfolio model.Portfolio, partials
 	}
 
 	// Create orders from diff
-	weightsDiff := desiredPortfolio.Weights.Diff(actualPortfolio.Weights)
-	// fmt.Printf("desired portfolio weights: %+v\n", desiredPortfolio.Weights)
+	weightsDiff := desiredWeights.Diff(actualPortfolio.Weights)
+	// fmt.Printf("desired portfolio weights: %+v\n", desiredWeights)
+	// fmt.Printf("actual portfolio weights: %+v\n", actualPortfolio.Weights)
 	// fmt.Printf("diff: %+v\n", weightsDiff)
 
 	// Create orders from diffs
@@ -83,6 +84,9 @@ func (autopilot *Autopilot) Rebalance(desiredPortfolio model.Portfolio, partials
 		}
 
 		maxQuantity := volume / orderPrice // max possible quantity we can buy
+		if maxQuantity <= 0 {
+			continue
+		}
 		if !partials {
 			maxQuantity = math.Floor(maxQuantity)
 			if maxQuantity < 1 {
@@ -101,7 +105,7 @@ func (autopilot *Autopilot) Rebalance(desiredPortfolio model.Portfolio, partials
 	// Do we still have cash left to allocate?
 	if availableCash > 0 {
 		for _, asset := range assets {
-			volume := availableCash * desiredPortfolio.Weights[asset]
+			volume := availableCash * desiredWeights[asset]
 			orderPrice := actualPortfolio.Prices[asset]
 			quantity := volume / orderPrice
 			orderType := model.OrderTypeBuy
