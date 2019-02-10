@@ -167,7 +167,13 @@ func (broker *robinhoodBroker) GetPortfolio(assets ...model.Asset) (model.Portfo
 	// Calculate weights
 	weights := model.Weights{}
 	for _, asset := range assets {
-		weights[asset] = (quantities[asset] * prices[asset] / total)
+		if total == 0 {
+			weights[asset] = 0
+		} else {
+			quantity := quantities[asset]
+			price := prices[asset]
+			weights[asset] = (quantity * price / total)
+		}
 	}
 
 	return model.Portfolio{

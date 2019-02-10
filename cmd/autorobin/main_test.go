@@ -49,8 +49,7 @@ func TestRebalance(t *testing.T) {
 
 	// Rebalance
 	partials := true
-	minReturn := -1.
-	orders, err := autopilot.Rebalance(desiredWeights, partials, minReturn, assets...)
+	orders, err := autopilot.Rebalance(desiredWeights, partials, assets...)
 	g.Expect(err).To(gomega.BeNil())
 	g.Expect(orders).ToNot(gomega.BeEmpty())
 	g.Expect(len(orders)).To(gomega.Equal(3))

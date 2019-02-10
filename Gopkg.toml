@@ -29,10 +29,6 @@
   source = "github.com/MitchK/go-robinhood"
   branch = "master"
 
-[[constraint]]
-  name = "github.com/jinzhu/gorm"
-  version = "1.9.1"
-
 [prune]
   go-tests = true
   unused-packages = true

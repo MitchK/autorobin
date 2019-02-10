@@ -55,33 +55,6 @@ func TestRebalance(t *testing.T) {
 		},
 		TotalValue: 100.0,
 	}
-	positions := []model.Position{
-		model.Position{
-			Asset:       a,
-			AvgBuyPrice: 0.0,
-			Quantity:    actualPortfolio.Quantities[a],
-		},
-		model.Position{
-			Asset:       b,
-			AvgBuyPrice: 0.9,
-			Quantity:    actualPortfolio.Quantities[b],
-		},
-		model.Position{
-			Asset:       c,
-			AvgBuyPrice: 0.9,
-			Quantity:    actualPortfolio.Quantities[c],
-		},
-		model.Position{
-			Asset:       d,
-			AvgBuyPrice: 0.9,
-			Quantity:    actualPortfolio.Quantities[d],
-		},
-		model.Position{
-			Asset:       e,
-			AvgBuyPrice: 0.9,
-			Quantity:    actualPortfolio.Quantities[e],
-		},
-	}
 
 	// mock out function calls
 	mockBroker.EXPECT().GetAvailableCash().Return(availableCash, nil)
@@ -91,16 +64,10 @@ func TestRebalance(t *testing.T) {
 		gomock.Eq(c),
 		gomock.Eq(d),
 		gomock.Eq(e)).Return(actualPortfolio, nil)
-	mockBroker.EXPECT().GetPositions(
-		gomock.Eq(a),
-		gomock.Eq(b),
-		gomock.Eq(c),
-		gomock.Eq(d),
-		gomock.Eq(e)).Return(positions, nil)
 	autopilot, err := autopilot.NewAutopilot(mockBroker)
 	g.Expect(err).To(gomega.BeNil())
 
-	orders, err := autopilot.Rebalance(desiredWeights, true, -1, assets...)
+	orders, err := autopilot.Rebalance(desiredWeights, true, assets...)
 	g.Expect(err).To(gomega.BeNil())
 	g.Expect(orders).ToNot(gomega.BeNil())
 	g.Expect(orders).ToNot(gomega.BeEmpty())

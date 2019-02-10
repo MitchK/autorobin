@@ -37,11 +37,12 @@ func (fake *Fake) Execute(orders ...model.Order) []error {
 	errs := []error{}
 
 	for _, order := range orders {
-		if order.Type == model.OrderTypeBuy {
-			fmt.Printf("BUY %v x %s @ %v (%s)\n", order.Quantity, order.Asset.Symbol, order.Price, order.Description)
-		} else if order.Type == model.OrderTypeSell {
-			fmt.Printf("SELL %v x %s @ %v (%s)\n", order.Quantity, order.Asset.Symbol, order.Price, order.Description)
-		}
+		// Disabled output
+		// if order.Type == model.OrderTypeBuy {
+		// 	fmt.Printf("BUY %v x %s @ %v (%s)\n", order.Quantity, order.Asset.Symbol, order.Price, order.Description)
+		// } else if order.Type == model.OrderTypeSell {
+		// 	fmt.Printf("SELL %v x %s @ %v (%s)\n", order.Quantity, order.Asset.Symbol, order.Price, order.Description)
+		// }
 
 		if order.Asset == (model.Asset{}) {
 			errs = append(errs, errors.New("cannot execute order: no asset set"))

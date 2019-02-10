@@ -1,6 +1,7 @@
 package autopilot
 
 import (
+	"fmt"
 	"math"
 
 	"github.com/MitchK/autorobin/lib/broker"
@@ -25,41 +26,33 @@ func (autopilot *Autopilot) GetBroker() broker.Broker {
 }
 
 // Rebalance Rebalance
-func (autopilot *Autopilot) Rebalance(desiredWeights model.Weights, partials bool, minReturn float64, assets ...model.Asset) ([]model.Order, error) {
+func (autopilot *Autopilot) Rebalance(desiredWeights model.Weights, partials bool, assets ...model.Asset) ([]model.Order, error) {
 
 	// Get available cash
 	availableCash, err := autopilot.broker.GetAvailableCash()
 	if err != nil {
 		return nil, err
 	}
+	fmt.Println("Unallocated cash:", availableCash)
 
 	// Get actual portfolio
 	actualPortfolio, err := autopilot.broker.GetPortfolio(assets...)
 	if err != nil {
 		return nil, err
 	}
-
-	// Get open positions
-	positions, err := autopilot.broker.GetPositions(assets...)
-	if err != nil {
-		return nil, err
-	}
+	fmt.Printf("Current portfolio value for assets %v: %v\n", assets, actualPortfolio.TotalValue)
 
 	// Create orders from diff
 	weightsDiff := desiredWeights.Diff(actualPortfolio.Weights)
-	// fmt.Printf("desired portfolio weights: %+v\n", desiredWeights)
-	// fmt.Printf("actual portfolio weights: %+v\n", actualPortfolio.Weights)
-	// fmt.Printf("diff: %+v\n", weightsDiff)
 
 	// Create orders from diffs
 	orders := []model.Order{}
-	for i, asset := range assets {
+	for _, asset := range assets {
 		var description string
 		var orderType model.OrderType
 
 		// Get current market price
 		orderPrice := actualPortfolio.Prices[asset]
-		position := positions[i]
 
 		// determine how much we can use to buy new stocks
 		volume := actualPortfolio.TotalValue * weightsDiff[asset]
@@ -74,13 +67,6 @@ func (autopilot *Autopilot) Rebalance(desiredWeights model.Weights, partials boo
 			description = "Sale of excess stocks"
 			orderType = model.OrderTypeSell
 			volume *= -1
-
-			if minReturn > 0 {
-				ret := (orderPrice - position.AvgBuyPrice) / position.AvgBuyPrice
-				if ret < minReturn {
-					continue
-				}
-			}
 		}
 
 		maxQuantity := volume / orderPrice // max possible quantity we can buy
